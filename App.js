@@ -12,7 +12,6 @@ import {
   View,
 } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
-import Ionicons from "@expo/vector-icons/Ionicons";
 import axios from "axios";
 import { HfInference } from "@huggingface/inference";
 import { API_TOKEN } from "@env";
@@ -25,29 +24,15 @@ import React, { useState, useRef, useEffect } from "react";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import { playAudio } from "./scripts/audioUtils"; // Ajusta la ruta según tu estructura de carpetas
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import AudioTranscoder from "react-native-audio-transcoder";
-import { Platform } from "react-native";
+import Description from "./components/Description";
+import * as Clipboard from 'expo-clipboard';
+import CopyButton from "./components/CopyButton";
+
+
 
 global.Buffer = Buffer;
-
-/* const hf = new HfInference(API_TOKEN);
-console.log("This is the token:", API_TOKEN);
- */
 const hf = new HfInference(API_TOKEN);
-console.log("This is the token:", API_TOKEN);
-
-const convertAudioToMp3 = async (m4aUri) => {
-  const mp3Uri = m4aUri.replace(".m4a", ".mp3");
-
-  try {
-    await AudioTranscoder.transcode(m4aUri, mp3Uri, "audio/mpeg");
-    console.log("Audio convertido a MP3:", mp3Uri);
-    return mp3Uri;
-  } catch (error) {
-    console.error("Error al convertir el audio:", error);
-    throw error;
-  }
-};
+//console.log("This is the token:", API_TOKEN);
 
 // Función para obtener el tipo MIME del archivo
 const getFileType = (fileUri) => {
@@ -63,7 +48,7 @@ const getFileType = (fileUri) => {
     case "mp3":
       return "audio/mpeg";
     case "m4a":
-      return "audio/mp4";
+      return "audio/mpeg";
     default:
       return "audio/*";
   }
@@ -84,7 +69,7 @@ const query = async (audioUri) => {
       url: `https://api-inference.huggingface.co/models/ctaguchi/killkan_asr`,
       method: "POST",
       headers: {
-        Authorization: `Bearer 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`,
+        Authorization: `Bearer ${API_TOKEN}`,
         Accept: "application/json",
         "Content-Type": "multipart/form-data",
       },
@@ -95,7 +80,7 @@ const query = async (audioUri) => {
     return response.data;
   } catch (error) {
     if (error.response && error.response.status === 503) {
-      Alert.alert("Error", "Inténtalo más tarde");
+      //Alert.alert("Error", "Inténtalo más tarde");
     } else {
       console.error("Error making the request:", error);
     }
@@ -121,6 +106,13 @@ export default function App() {
   const [sound, setSound] = useState(null);
   const [audioDuration, setAudioDuration] = useState(0);
   const [currentPosition, setCurrentPosition] = useState(0);
+
+  const [copyMessageVisible, setCopyMessageVisible] = useState(false);
+
+  const handleCopy = () => {
+    setCopyMessageVisible(true);
+    setTimeout(() => setCopyMessageVisible(false), 2000); // Oculta el mensaje después de 2 segundos
+  };
 
   //------------------------------------------------------------------
   //---------------Enviar Audio al Modelo-----------------------------
@@ -153,9 +145,7 @@ export default function App() {
       const result = await DocumentPicker.getDocumentAsync({
         type: "audio/*", // Solo archivos de audio
       });
-
       console.log("Resultado del selector de documentos:", result);
-
       if (
         result.canceled === false &&
         result.assets &&
@@ -196,8 +186,29 @@ export default function App() {
       });
 
       console.log("Starting recording...");
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      const { recording } = await Audio.Recording.createAsync({
+         ...Audio.RecordingOptionsPresets.HIGH_QUALITY={
+          android: {
+            extension: ".mp3",
+            quality: "high",
+            sampleRate: 16000,
+            channels: 2,
+            bitRate: 128000,
+            audioEncoding: "aac",
+            },
+            ios:{
+              extension: ".m4a",
+              quality: "high",
+              sampleRate: 44100,
+              channels: 2,
+              bitRate: 128000,
+              audioEncoding: "aac",
+
+            }
+         }
+      }
+       
+        
       );
       setRecording(recording);
       console.log("Recording started");
@@ -241,6 +252,7 @@ export default function App() {
 
   const handlePlayRecording = () => {
     if (recordingUri) {
+      //getMp3File(recordingUri);
       playAudio(
         recordingUri,
         sound,
@@ -287,6 +299,7 @@ export default function App() {
           Kichwa ASR
         </Text>
       </View>
+      <Description />
 
       <View
         style={{
@@ -327,7 +340,6 @@ export default function App() {
               backgroundColor: pressed ? "#02CFE6" : "#023FE6",
               borderRadius: 15,
               alignContent: "center",
-              padding: 10,
               flexDirection: "row",
               justifyContent: "space-between",
               padding: 10,
@@ -444,19 +456,13 @@ export default function App() {
                 numberOfLines={10}
                 onChangeText={setTextData}
               />
+              <CopyButton textToCopy={textData} onCopy={handleCopy} />
+          {copyMessageVisible && (
+            <Text style={styles.copyMessage}>Texto copiado</Text>
+          )}
        </View>
         </>
       )}
-      <Pressable
-        style={({ pressed }) => [
-          styles.button,
-          pressed ? styles.buttonPressed : styles.buttonDefault,
-        ]}
-        //onPress={handleButtonUpload} // Llama a la función para enviar el audio
-      >
-        <FontAwesome5 name="download" size={24} color="black" />
-        <Text style={{ color: "white" }}> Descargar</Text>
-      </Pressable>
     </SafeAreaView>
   );
 }
@@ -481,20 +487,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333",
   },
-  button: {
-    marginTop: 15,
-    borderRadius: 15,
-    alignContent: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 10,
-  },
-  buttonPressed: {
-    borderColor: "#48c9b0",
-    backgroundColor: "#48c9b0",
-  },
-  buttonDefault: {
-    borderColor: "#3498db",
-    backgroundColor: "#3498db",
+  copyMessage: {
+    marginTop: 10,
+    color: 'green',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

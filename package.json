@@ -10,19 +10,25 @@
   },
   "dependencies": {
     "@huggingface/inference": "^2.8.0",
+    "@types/react": "~18.2.79",
     "axios": "^1.7.5",
     "buffer": "^6.0.3",
     "dotenv": "^16.4.5",
     "expo": "~51.0.28",
     "expo-av": "^14.0.7",
+    "expo-clipboard": "^6.0.3",
     "expo-document-picker": "~12.0.2",
     "expo-file-system": "^17.0.1",
     "expo-sharing": "^12.0.1",
     "expo-status-bar": "~1.12.1",
+    "ffmpeg-kit-react-native": "^6.0.2",
     "react": "18.2.0",
     "react-native": "0.74.5",
+    "react-native-audio-recorder-player": "^3.6.10",
     "react-native-audio-transcoder": "^0.3.0",
-    "react-native-dotenv": "^3.4.11"
+    "react-native-dotenv": "^3.4.11",
+    "react-native-fs": "^2.20.0",
+    "typescript": "~5.3.3"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
